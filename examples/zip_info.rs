@@ -5,7 +5,7 @@
 async fn main() {
     if let Err(err) = inner::run().await {
         eprintln!("Error: {}", err);
-        eprintln!("Usage: cli_compress <input file or directory> <output ZIP file name>");
+        eprintln!("Usage: zip_info <input zip file>");
         std::process::exit(1);
     }
 }
@@ -34,7 +34,8 @@ mod inner {
                 bail!("The input file specified doesn't exist.");
             }
 
-            let mut reader = ZipFileReader::new(zip_path).await.expect("Failed to read zip file");
+            let mut reader = ZipFileReader::new(zip_path).await.expect("Failed to read zip file!");
+            println!("file-count:{0}", reader.file().entries().len());
             for index in 0..reader.file().entries().len() {
                 let entry = reader.file().entries().get(index).unwrap();
 
@@ -60,7 +61,7 @@ mod inner {
                 }
             }
         } else {
-            eprintln!("Please input zip filepath ");
+            eprintln!("Please input zip file!");
         }
 
         Ok(())
