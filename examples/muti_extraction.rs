@@ -10,23 +10,31 @@
 //! <https://github.com/python/cpython/blob/ac0a19b62ae137c2c9f53fbba8ba3f769acf34dc/Lib/zipfile.py#L1662>
 //!
 
+use anyhow::{anyhow, Result};
+use async_zip::tokio::read::fs::ZipFileReader;
+use std::ops::Deref;
+use std::sync::Arc;
 use std::{
     env::current_dir,
     path::{Path, PathBuf},
 };
-use std::sync::Arc;
-
-use async_zip::tokio::read::fs::ZipFileReader;
 use tokio::fs::{create_dir_all, File, OpenOptions};
-use tokio::task;
-use tokio_util::compat::{Compat, TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
-
+use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 #[tokio::main]
-async fn main() {
-    let archive =  Path::new("example.zip");
-    let out_dir = ".".to_string();
+async fn main() -> Result<()> {
+    if std::env::args().len() > 1 {
+        let mut args = std::env::args().skip(1);
 
-    unzip_file(archive, out_dir).await;
+        let input_str = args.next().ok_or(anyhow!("No input zip file specified."))?;
+        let zip_path = Path::new(&input_str);
+        //let archive =  Path::new("example.zip");
+        let out_dir = args.next().unwrap_or("./".to_string());
+        unzip_file(zip_path, out_dir).await;
+    } else {
+        eprintln!("Error input!");
+        eprintln!("Usage: muti_extraction <input zip file> <out folder>");
+    }
+    Ok(())
 }
 
 /// Returns a relative path without reserved names, redundant separators, ".", or "..".
@@ -41,27 +49,25 @@ fn sanitize_file_path(path: &str) -> PathBuf {
 
 /// Extracts everything from the ZIP archive to the output directory
 async fn unzip_file(archive: &Path, out_dir: String) {
-
     let mut handles = Vec::with_capacity(10);
-    let out_vec=Arc::new(out_dir.into_bytes());
-    let  reader = ZipFileReader::new(archive).await.expect("Failed to read zip file");
-    for i in 0..reader.file().entries().len() {
-        handles.push(tokio::spawn(write_entity(i,out_vec.clone(),reader.clone())));
+    let share_dir = Arc::new(out_dir);
+    let reader = ZipFileReader::new(archive).await.expect("Failed to read zip file");
+    let share_reader = Arc::new(reader);
+    for i in 0..share_reader.file().entries().len() {
+        handles.push(tokio::spawn(write_entity(i, share_dir.clone(), share_reader.clone())));
     }
     futures::future::join_all(handles).await;
-
 }
 
-async fn write_entity(index: usize,out_dir:Arc<Vec<u8>>,reader: ZipFileReader) {
-
-
+async fn write_entity(index: usize, out_dir: Arc<String>, reader: Arc<ZipFileReader>) {
+    let dir = out_dir.deref();
     let entry = reader.file().entries().get(index).unwrap();
-    let out_dir = current_dir().expect("Failed to get current working directory");
+    let out_dir = Path::new(dir);
     let path = out_dir.join(sanitize_file_path(entry.filename().as_str().unwrap()));
 
     let entry_is_dir = entry.dir().unwrap();
 
-    let   entry_reader = reader.reader_without_entry(index).await.expect("Failed to read ZipEntry");
+    let entry_reader = reader.reader_without_entry(index).await.expect("Failed to read ZipEntry");
 
     if entry_is_dir {
         // The directory may have been created if iteration is out of order.

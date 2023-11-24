@@ -18,10 +18,10 @@ mod inner {
     use std::path::{Path, PathBuf};
 
     use anyhow::{anyhow, bail, Result};
+    use async_zip::error::ZipError;
     use async_zip::tokio::read::fs::ZipFileReader;
     use futures_util::io::AsyncReadExt;
     use tokio::fs::File;
-    use async_zip::error::ZipError;
 
     pub(crate) async fn run() -> Result<()> {
         if std::env::args().len() > 1 {
@@ -54,7 +54,7 @@ mod inner {
                     println!("header-offset:{0}", entry.header_offset());
                     println!("uncompressed-size:{0}", entry.uncompressed_size());
                     println!("compress-size:{0}", entry.compressed_size());
-                    for extra_field in entry.extra_fields()  {
+                    for extra_field in entry.extra_fields() {
                         println!("extra_filed:{:?}", extra_field);
                     }
                     println!("compress-comment:{0}", entry.comment().as_str().unwrap());
@@ -66,5 +66,4 @@ mod inner {
 
         Ok(())
     }
-
-    }
+}
