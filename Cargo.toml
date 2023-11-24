@@ -12,9 +12,14 @@ homepage = "https://github.com/Majored/rs-async-zip"
 keywords = ["async", "zip", "archive", "tokio"]
 categories = ["asynchronous", "compression"]
 
+[build]
+rustflags = ["--cfg", "tokio_unstable"]
+
 [features]
 default=["full"]
 full = ["chrono", "tokio-fs", "deflate", "bzip2", "lzma", "zstd", "xz", "deflate64"]
+
+
 
 # All features that are compatible with WASM
 full-wasm = ["chrono", "deflate", "zstd"]

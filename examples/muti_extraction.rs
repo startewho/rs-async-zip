@@ -18,6 +18,7 @@ use std::{
     env::current_dir,
     path::{Path, PathBuf},
 };
+use std::time::Instant;
 use tokio::fs::{create_dir_all, File, OpenOptions};
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 #[tokio::main]
@@ -49,6 +50,7 @@ fn sanitize_file_path(path: &str) -> PathBuf {
 
 /// Extracts everything from the ZIP archive to the output directory
 async fn unzip_file(archive: &Path, out_dir: String) {
+    let now = Instant::now();
     let mut handles = Vec::with_capacity(10);
     let share_dir = Arc::new(out_dir);
     let reader = ZipFileReader::new(archive).await.expect("Failed to read zip file");
@@ -57,9 +59,12 @@ async fn unzip_file(archive: &Path, out_dir: String) {
         handles.push(tokio::spawn(write_entity(i, share_dir.clone(), share_reader.clone())));
     }
     futures::future::join_all(handles).await;
+    let elapsed_time = now.elapsed();
+    println!("Unzip file take {} seconds.", elapsed_time.as_secs());
 }
 
 async fn write_entity(index: usize, out_dir: Arc<String>, reader: Arc<ZipFileReader>) {
+    println!("task id:{}",id());
     let dir = out_dir.deref();
     let entry = reader.file().entries().get(index).unwrap();
     let out_dir = Path::new(dir);
