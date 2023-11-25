@@ -36,7 +36,7 @@ async fn main() -> Result<()> {
         unzip_file(zip_path, out_dir).await;
     } else {
         eprintln!("Error input!");
-        eprintln!("Usage: muti_extraction <input zip file> <out folder>");
+        eprintln!("Usage:zip-index <input zip file> <out folder>");
     }
     Ok(())
 }
